@@ -1,15 +1,33 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { NextFunction, Request, Response } from "express";
 
-// Ensure the upload directory exists
-const uploadDir = path.join(__dirname, "../public/users");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// Extend Request Type to Include uploadDir
+interface CustomRequest extends Request {
+  uploadDir?: string;
 }
 
+// Middleware to dynamically set the upload directory
+const setUploadDirectory =
+  (uploadDir: string) =>
+  (req: CustomRequest, res: Response, next: NextFunction) => {
+    req.uploadDir = uploadDir;
+    // console.log("Upload Directory Set:", uploadDir);
+    next();
+  };
+
 const userStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: CustomRequest, file, cb) => {
+    const uploadDir = req.uploadDir || path.join(__dirname, "../public/users"); // Default directory
+
+    // console.log("Using Upload Directory:", uploadDir);
+
+    // Ensure the directory exists (Synchronous)
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
@@ -39,4 +57,4 @@ const uploadImage = multer({
   },
 });
 
-export { uploadImage };
+export { uploadImage, setUploadDirectory };

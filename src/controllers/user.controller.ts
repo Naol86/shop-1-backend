@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { createUser, getUserByEmail } from "../services/user.service";
 import { successHandler } from "../utils/successHandler";
 import { AppError } from "../utils/customClass";
 import { generateAccessToken } from "../utils/JWTToken";
+import prisma from "../config/prisma";
+import bcrypt from "bcrypt";
 
 export const CreateUser = async (
   req: Request,
@@ -11,16 +12,20 @@ export const CreateUser = async (
 ) => {
   const { name, email, password } = req.body;
 
-  const userExists = await getUserByEmail(email);
+  const userExists = await prisma.user.findUnique({ where: { email } });
   if (userExists) {
     const error = new AppError("User already exists", 409);
     next(error);
     return;
   }
 
-  const user = await createUser({ name, email, password });
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await prisma.user.create({
+    data: { name, email, password: hashedPassword },
+  });
   if (user) {
-    const { password, ...newUser } = user.dataValues;
+    const { password, ...newUser } = user;
     successHandler(res, 201, "user created", newUser);
     return;
   }
@@ -34,7 +39,9 @@ export const loginUser = async (
   next: NextFunction
 ) => {
   const { email, password } = req.body;
-  const user = await getUserByEmail(email);
+  console.log(email, password);
+  const user = await prisma.user.findUnique({ where: { email } });
+  console.log(user);
   if (!user) {
     const error = new AppError("User does not exist", 404);
     next(error);
@@ -45,13 +52,12 @@ export const loginUser = async (
     next(error);
     return;
   }
-  const accessToken = generateAccessToken(user.dataValues);
+  const accessToken = generateAccessToken(user);
   if (!accessToken) {
     const error = new AppError("Please try again later", 500);
     next(error);
     return;
   }
-
   successHandler(res, 200, "login successful", { user, accessToken });
 };
 

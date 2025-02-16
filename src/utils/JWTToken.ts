@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
-import { UserType } from "../types/user.type";
 import { configDotenv } from "dotenv";
+import { User } from "@prisma/client";
 
 configDotenv();
 
-export const generateAccessToken = (user: UserType) => {
+export const generateAccessToken = (user: User) => {
   try {
     const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET as string;
     console.log(user, accessTokenSecret);

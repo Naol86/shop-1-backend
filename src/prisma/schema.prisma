@@ -5,22 +5,81 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 datasource db {
-  provider = "mongodb"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 model User {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  email     String   @unique
-  password  String
-  role      Role     @default(ADMIN)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  password       String
+  role           Role     @default(ADMIN)
+  profilePicture String   @default("")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("backend1_users")
+}
+
+model Categories {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String
+  image       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  SubCategories SubCategories[]
+
+  Products Products[]
+
+  @@map("backend1_categories")
+}
+
+model SubCategories {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String
+  image       String?
+  categoryId  Int
+  category    Categories @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  Products Products[]
+
+  @@map("backend1_sub_categories")
+}
+
+model Products {
+  id            Int             @id @default(autoincrement())
+  name          String
+  description   String
+  price         Float
+  categoryId    Int
+  subCategoryId Int
+  category      Categories      @relation(fields: [categoryId], references: [id])
+  subCategory   SubCategories   @relation(fields: [subCategoryId], references: [id])
+  images        ProductImages[] // One-to-Many relationship
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("backend1_products")
+}
+
+model ProductImages {
+  id        Int      @id @default(autoincrement())
+  productId Int
+  imageUrl  String
+  product   Products @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("backend1_product_images")
 }
 
 enum Role {
